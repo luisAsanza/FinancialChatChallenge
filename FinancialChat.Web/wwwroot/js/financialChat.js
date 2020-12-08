@@ -15,10 +15,11 @@ document.getElementById("sendButton").disabled = true;
 
 connection.on("ReceiveMessage", function (user, message) {
     var msg = message.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    var encodedMsg = user + " says " + msg;
+    var encodedMsg = "<strong>" + user + " says </strong>" + msg;
     var li = document.createElement("li");
-    li.textContent = encodedMsg;
+    li.innerHTML = encodedMsg;
     document.getElementById("messagesList").appendChild(li);
+    RestrictMaxNumberOfMessages();
 });
 
 connection.start().then(function () {
@@ -28,10 +29,12 @@ connection.start().then(function () {
 });
 
 document.getElementById("sendButton").addEventListener("click", function (event) {
-    var user = document.getElementById("userInput").value;
     var message = document.getElementById("messageInput").value;
-    connection.invoke("SendMessage", user, message).catch(function (err) {
-        return console.error(err.toString());
-    });
+    if (message.length > 0) {
+        connection.invoke("SendMessage", message).catch(function (err) {
+            HandleErrorMessage(err.toString());
+        });
+        document.getElementById("messageInput").value = "";
+    }
     event.preventDefault();
 });

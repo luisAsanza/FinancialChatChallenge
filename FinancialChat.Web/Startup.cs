@@ -1,9 +1,11 @@
+using FinancialChat.Repository;
+using FinancialChat.Service;
+using FinancialChat.StockBot;
 using FinancialChat.Web.Areas.ClientServerCommunication.Hubs;
+using FinancialChat.Web.Areas.Identity.Data;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
-using FinancialChat.Web.Data;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -22,16 +24,24 @@ namespace FinancialChat.Web
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(
-                    Configuration.GetConnectionString("DefaultConnection")));
+            //DB Contexts Section: For demo purposes, Identity Management and Financial Chat Data will be stored in same DB, but accessed with different Context objects
+            //Identity Db Context
+            services.AddDbContext<IdentityContext>(options =>
+                options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
+            //Financial Chat Db Context
+            services.AddDbContext<FinancialChatContext>(options => 
+                options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
+
+            //Dependency Injection for Repositories and Services
+            services.AddScoped<IFinancialChatMessageRepository, FinancialChatMessageRepository>();
+            services.AddTransient<IFinancialChatMessageService, FinancialChatMessageService>();
+            services.AddTransient<IStockBot>(s => new StockBot.StockBot(Configuration["StooqBaseUrl"]));
+
             services.AddDatabaseDeveloperPageExceptionFilter();
 
-            services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
-                .AddEntityFrameworkStores<ApplicationDbContext>();
             services.AddControllersWithViews();
             //Add SignalR services to the current project
-            services.AddSignalR();
+            services.AddSignalR(options => options.EnableDetailedErrors = true);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -62,7 +72,7 @@ namespace FinancialChat.Web
                     name: "default",
                     pattern: "{controller=Home}/{action=Index}/{id?}");
                 endpoints.MapRazorPages();
-                //Map income requests within "financialchathub" path to the FinancialChatHub Hub class
+                //Map income requests with "financialchathub" path to the FinancialChatHub Hub class
                 endpoints.MapHub<FinancialChatHub>("/financialchathub");
             });
         }

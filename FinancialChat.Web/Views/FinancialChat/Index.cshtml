@@ -1,18 +1,63 @@
-﻿@{
+﻿@using System.Collections
+@using FinancialChat.Data.Entity
+
+@model IEnumerable<FinancialChatMessage>
+@{
     Layout = "_Layout";
+    ViewData["Title"] = "Financial Chat";
 }
 
 @section Scripts
 {
     <script src="lib/microsoft/signalr/dist/browser/signalr.js"></script>
     <script src="js/financialChat.js"></script>
+    <script>
+        $(function() {
+            ScrollDownMessageContainer();
+            $('#messageInput').keypress(OnKeyPressMessageInput);
+        });
+
+        //When user hits Enter key, then submit message
+        function OnKeyPressMessageInput(e) {
+            var key = e.which;
+            if (key === 13) // the enter key code
+            {
+                $('#sendButton').click();
+                return false;
+            }
+
+            return true;
+        }
+
+        //As required, only a max of 50 messages can be displayed on the chat
+        function RestrictMaxNumberOfMessages() {
+            var maxNumberOfMessages = 50;
+
+            if ($("#messagesList li").length > maxNumberOfMessages) {
+                $("#messagesList li")[0].remove();
+            }
+
+            ScrollDownMessageContainer();
+        }
+
+        //To always see latest messages
+        function ScrollDownMessageContainer() {
+            $('#messagesListContainer').scrollTop($('#messagesListContainer')[0].scrollHeight);
+        }
+
+        //Display user friendly error sent from server, when error happened in Hub
+        function HandleErrorMessage(message) {
+            $("#errorMessage").text(message);
+            $("#errorMessage").show().delay(4000).fadeOut();
+        }
+    </script>
 }
 
 <div class="container">
     <div class="row">&nbsp;</div>
     <div class="row">
         <div class="col-2">User</div>
-        <div class="col-4"><input type="text" id="userInput" /></div>
+        <div class="col-4"><label>@User.Identity.Name</label></div>
     </div>
     <div class="row">
         <div class="col-2">Message</div>
@@ -31,7 +76,20 @@
     </div>
 </div>
 <div class="row">
-    <div class="col-6">
-        <ul id="messagesList"></ul>
+    <div class="col-12">
+        <label id="errorMessage" style="color: red;"></label>
+    </div>
+</div>
+<div class="row">
+    <div id="messagesListContainer" class="col-6" style="max-height:300px; overflow-y:scroll;">
+        <ol id="messagesList">
+            @if (Model != null)
+            {
+                foreach (var financialChatMessage in Model)
+                {
+                    <li><strong>@financialChatMessage.SenderUserName says </strong>@financialChatMessage.Message</li>
+                }
+            }
+        </ol>
     </div>
 </div>
